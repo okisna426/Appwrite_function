@@ -1,8 +1,10 @@
-import sdk from "node-appwrite";
-import axios from "axios";
+// Load required libraries (Node 16 uses require)
+const sdk = require("node-appwrite");
+const axios = require("axios");
 
-export default async ({ req, res, log, error }) => {
+module.exports = async function ({ req, res, log, error }) {
   try {
+    // Parse request body
     const body = req.body ? JSON.parse(req.body) : {};
 
     const title = body.title || "Default Title";
@@ -11,27 +13,27 @@ export default async ({ req, res, log, error }) => {
 
     // ---- 1. Appwrite client setup ----
     const client = new sdk.Client()
-      .setEndpoint(process.env.APPWRITE_ENDPOINT)
-      .setProject(process.env.APPWRITE_PROJECT_ID)
-      .setKey(process.env.APPWRITE_API_KEY);
+      .setEndpoint(process.env.APPWRITE_ENDPOINT)       // Example: http://IP/v1
+      .setProject(process.env.APPWRITE_PROJECT_ID)      // Project ID
+      .setKey(process.env.APPWRITE_API_KEY);            // API Key
 
     const databases = new sdk.Databases(client);
 
-    // ---- 2. Database me notification save karo ----
+    // ---- 2. Save notification data in Appwrite DB ----
     await databases.createDocument(
-      process.env.NOTIF_DB_ID,
-      process.env.NOTIF_COLLECTION_ID,
-      "unique()",
+      process.env.NOTIF_DB_ID,             // notifications_db
+      process.env.NOTIF_COLLECTION_ID,     // notifications
+      "unique()",                           // Auto ID
       {
-        title,
+        title: title,
         body: message,
-        topic,
+        topic: topic,
         status: "sent"
       }
     );
 
-    // ---- 3. ntfy server ko POST request bhejo ----
-    const ntfyUrl = process.env.NTFY_URL; // e.g. http://K8S_PUBLIC_IP:30100
+    // ---- 3. Send ntfy notification ----
+    const ntfyUrl = process.env.NTFY_URL;   // Example: http://K8S_IP:30100
 
     await axios.post(`${ntfyUrl}/${topic}`, message, {
       headers: {
@@ -41,7 +43,7 @@ export default async ({ req, res, log, error }) => {
 
     return res.json({
       success: true,
-      message: "Notification saved + sent via ntfy"
+      message: "Notification saved + sent via ntfy 🎉"
     });
   } catch (err) {
     error(err);
